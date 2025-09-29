@@ -218,8 +218,8 @@ public class JavaDockerCodeSandbox implements CodeSandBox {
                 dockerClient
                         .execStartCmd(execId)
                         .exec(execStartResultCallback)
-                        .awaitCompletion();   // 还是需要编写回调函数
-//                        .awaitCompletion(TIME_OUT, TimeUnit.MICROSECONDS);   // 还是需要编写回调函数
+                        .awaitCompletion()   // 还是需要编写回调函数
+                        .awaitCompletion(TIME_OUT, TimeUnit.MICROSECONDS);   // 还是需要编写回调函数
                 stopWatch.stop();
                 statsCmd.close();             // 需要关闭内存信息输出，否则一直写
                 time = stopWatch.getLastTaskTimeMillis();  // 关闭后就立即记录时间
@@ -239,45 +239,51 @@ public class JavaDockerCodeSandbox implements CodeSandBox {
 
 
 
-//        /** 4. 搜集结果，将结果返回给判题系统 */
-//        ExecuteCodeResponse executeCodeResponse = new ExecuteCodeResponse();
-//        ArrayList<String> outputList = new ArrayList<>();
-//        long maxTime = Long.MIN_VALUE;
-//        for (ExecuteMessage executeMessage : executeMessageList) {
-//            if (StrUtil.isNotBlank(executeMessage.getErrorMessage())) {
-//                // 将错误信息搜集
-//                executeCodeResponse.setMessage(executeMessage.getErrorMessage());
-//                // 设置运行状态为错误
-//                executeCodeResponse.setStatus(3);
-//                break;
-//            }
-//            outputList.add(executeMessage.getMessage());
-//            Long time = executeMessage.getTime();
-//            if (time != null) {
-//                maxTime = Math.max(maxTime, time);
-//            }
-//        }
-//        executeCodeResponse.setOutput(outputList);
-//
-//        // 如果所有样例都有答案我们将状态设置为成功
-//        if (inputList.size() == outputList.size()) {
-//            executeCodeResponse.setStatus(1);
-//        }
-//        JudgeInfo judgeInfo = new JudgeInfo();
-//
-//        judgeInfo.setTime(maxTime);
-//        judgeInfo.setMemory(2l);
-//
-//        executeCodeResponse.setJudgeInfo(judgeInfo);
-//
-//        // 5. 文件清理
-//        // if (FileUtil.isDirectory(userCodeParentPath)){
-//        if (userCodeFile.getParent() != null) {
-//            boolean isDel = FileUtil.del(userCodeParentPath);
-//            System.out.println(isDel ? "删除成功！！！" : "删除失败！！！");
-//        }
+       /** 4. 搜集结果，将结果返回给判题系统 */
+       ExecuteCodeResponse executeCodeResponse = new ExecuteCodeResponse();
+       ArrayList<String> outputList = new ArrayList<>();
+       long maxTime = Long.MIN_VALUE;
+       long maxMemory = 0l;
+       for (ExecuteMessage executeMessage : executeMessageList) {
+           if (StrUtil.isNotBlank(executeMessage.getErrorMessage())) {
+               // 将错误信息搜集
+               executeCodeResponse.setMessage(executeMessage.getErrorMessage());
+               // 设置运行状态为错误
+               executeCodeResponse.setStatus(3);
+               break;
+           }
+           outputList.add(executeMessage.getMessage());
+           Long time = executeMessage.getTime();
+           if (time != null) {
+               maxTime = Math.max(maxTime, time);
+           }
+           Long memory = executeMessage.getMemory();
+           if (memory != null) {
+               maxMemory = Math.max(maxMemory, memory);
+           }
+       }
+       executeCodeResponse.setOutput(outputList);
 
-        return null;
+       // 如果所有样例都有答案我们将状态设置为成功
+       if (inputList.size() == outputList.size()) {
+           executeCodeResponse.setStatus(1);
+       }
+       JudgeInfo judgeInfo = new JudgeInfo();
+
+       judgeInfo.setTime(maxTime);
+       judgeInfo.setMemory(maxMemory);
+
+       executeCodeResponse.setJudgeInfo(judgeInfo);
+
+       // 5. 文件清理
+       // if (FileUtil.isDirectory(userCodeParentPath)){
+       if (userCodeFile.getParent() != null) {
+           boolean isDel = FileUtil.del(userCodeParentPath);
+           System.out.println(isDel ? "删除成功！！！" : "删除失败！！！");
+       }
+       // 删除容器
+       dockerClient.removeContainerCmd(containerId).withForce(true).exec();
+       return null;
     }
 
     /**
