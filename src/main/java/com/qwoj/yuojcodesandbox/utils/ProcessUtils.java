@@ -2,9 +2,11 @@ package com.qwoj.yuojcodesandbox.utils;
 
 import cn.hutool.core.util.StrUtil;
 import com.qwoj.yuojcodesandbox.model.ExecuteMessage;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.StopWatch;
 
 import java.io.*;
+import java.util.ArrayList;
 
 /**
  * 对终端执行的结果进行搜集
@@ -28,23 +30,31 @@ public class ProcessUtils {
                 // 获取程序正常输出流
                 BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(runProcess.getInputStream()));
                 String compilerOutputLine;
-                StringBuilder compilerOutputStreamBuilder = new StringBuilder();
+                ArrayList<String> outputStrList = new ArrayList<>();
                 while ((compilerOutputLine = bufferedReader.readLine()) != null) {
-                    compilerOutputStreamBuilder.append(compilerOutputLine + "\n");
+                    outputStrList.add(compilerOutputLine);
                 }
-                executeMessage.setMessage(compilerOutputStreamBuilder.toString());
-                System.out.println(compilerOutputStreamBuilder.toString());
+                executeMessage.setMessage(StringUtils.join(outputStrList, "\n"));
             } else {
                 System.out.println(opName + "失败" + exitValue);
+                // 获取程序正常输出流
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(runProcess.getInputStream()));
+                String compilerOutputLine;
+                ArrayList<String> outputStrList = new ArrayList<>();
+                while ((compilerOutputLine = bufferedReader.readLine()) != null) {
+                    outputStrList.add(compilerOutputLine);
+                }
+                executeMessage.setMessage(StringUtils.join(outputStrList, "\n"));
+
                 // 获取程序错误输出流
                 BufferedReader errorBufferedReader = new BufferedReader(new InputStreamReader(runProcess.getErrorStream()));
                 String errorCompilerOutputLine;
-                StringBuilder errorCompilerOutputStreamBuilder = new StringBuilder();
+
+                ArrayList<String> errorOutputStrList = new ArrayList<>();
                 while ((errorCompilerOutputLine = errorBufferedReader.readLine()) != null) {
-                    errorCompilerOutputStreamBuilder.append(errorCompilerOutputLine);
+                    errorOutputStrList.add(errorCompilerOutputLine);
                 }
-                executeMessage.setErrorMessage(errorCompilerOutputStreamBuilder.toString());
-                System.out.println(errorCompilerOutputStreamBuilder.toString());
+                executeMessage.setErrorMessage(StringUtils.join(errorOutputStrList, "\n"));
             }
             stopWatch.stop();
             long time = stopWatch.getLastTaskTimeMillis();
